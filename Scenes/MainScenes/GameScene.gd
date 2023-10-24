@@ -1,5 +1,7 @@
 extends Node2D
 
+signal game_finished(result)
+
 var map_node
 
 var build_mode=false
@@ -7,6 +9,8 @@ var build_valid = false
 var build_tile
 var build_location
 var build_type
+
+var base_health = 100
 
 var current_wave = 0
 var enemies_in_wave = 0
@@ -39,7 +43,7 @@ func start_next_wave():
 	spawn_enemies(wave_data)
 
 func retrieve_wave_data():
-	var wave_data = [["BlueTank",3.7],["BlueTank",2.7]]
+	var wave_data = [["BlueTank",1],["BlueTank",1],["BlueTank",0.6],["BlueTank",0.5],["BlueTank",1],["BlueTank",1]]
 	current_wave += 1
 	enemies_in_wave = wave_data.size()
 	return wave_data
@@ -47,6 +51,7 @@ func retrieve_wave_data():
 func spawn_enemies(wave_data):
 	for i in wave_data:
 		var new_enemy = load("res://Scenes/Enemies/"+i[0]+".tscn").instance()
+		new_enemy.connect("base_damage",self,"on_base_damage")
 		map_node.get_node("Path").add_child(new_enemy,true)
 		yield(get_tree().create_timer(i[1]),"timeout")
 
@@ -86,7 +91,16 @@ func verify_and_build():
 		var new_tower = load("res://Scenes/Turrets/"+ build_type +".tscn").instance()
 		new_tower.position = build_location
 		new_tower.built = true
+		new_tower.type = build_type
+		new_tower.catergory = GameData.tower_data[build_type]["catergory"]
 		map_node.get_node("Turrets").add_child(new_tower,true)
 		map_node.get_node("TowerExclusion").set_cellv(build_tile,7)
 		
 		
+func on_base_damage(damage):
+	base_health -= damage
+	if base_health <= 0:
+		emit_signal("game_finished",false)
+	else:
+		get_node("UI").update_health_bar(base_health)
+	
